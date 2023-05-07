@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mosquito"
+version = "0.1.0"
+description = ""
+license = {file = "LICENSE"}
+authors = [
+    {name="Raphael LaFrance", email="rafelafrance@proton.me"},
+]
+requires-python = ">=3.11"
+dependencies = [
+    "ipython",
+    "jupyter",
+    "jupyterlab",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "scipy",
+]
+optional-dependencies.dev = [
+    "ipyparallel",
+    "neovim",
+    "pre-commit",
+    "pre-commit-hooks",
+    "python-lsp-server[all]",
+    "ruff",
+    "tensorboard",
+]
+
+[tool.setuptools]
+py-modules = []
+
+[tool.ruff]
+line-length = 88
+extend-select = [
+    "BLE",
+    "C4",
+    "D",
+    "E",
+    "ERA",
+    "I",
+    "ISC",
+    "N",
+    "NPY",
+    "PD",
+    "PGH",
+    "Q",
+    "RET",
+    "RSE",
+    "RUF",
+    "S",
+    "SIM",
+    "T20",
+    "TCH",
+    "TID",
+    "UP",
+    "YTT",
+]
+show-fixes = true
+ignore = ["D10", "D203", "D213", "ERA001", "PD901", "RET504", "RUF001", "TID252"]
