@@ -2,36 +2,42 @@
 requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+py-modules = []
+
 [project]
 name = "mosquito"
 version = "0.1.0"
 description = ""
 license = {file = "LICENSE"}
-authors = [
-    {name="Raphael LaFrance", email="rafelafrance@proton.me"},
-]
-requires-python = ">=3.11"
+authors = []
+requires-python = ">=3.10"
 dependencies = [
-    "ipython",
+    "ipython>=8.12.1",
     "jupyter",
-    "jupyterlab",
-    "matplotlib",
+    "jupyterlab>=3.6.2",
+    "jupyterlab-code-formatter",
+    "jupyterlab-git>=0.40.1",
+    "matplotlib>=3.7.0",
     "numpy",
     "pandas",
     "scipy",
+    "scikit-learn",
+    "tensorboard",
 ]
 optional-dependencies.dev = [
-    "ipyparallel",
+    "ipyparallel>=8.6.0",
+    "isort",
+    "jupyter_nbextensions_configurator",
+    "jupyterlab-lsp>=4.0.1",
+    "jupyterlab-spellchecker>=0.7.2",
+    "nbdime>=3.2.0",
     "neovim",
     "pre-commit",
     "pre-commit-hooks",
     "python-lsp-server[all]",
     "ruff",
-    "tensorboard",
 ]
-
-[tool.setuptools]
-py-modules = []
 
 [tool.ruff]
 line-length = 88
