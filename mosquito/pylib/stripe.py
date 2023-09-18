@@ -1,9 +1,31 @@
+import csv
 from dataclasses import dataclass
+from typing import Literal
+from typing import TypeAlias
+
+DatasetName: TypeAlias = Literal["train", "val", "test"]
 
 
 @dataclass
 class Stripe:
-    dataset: str  # Train, val, test
+    """This class us used to mark where data is in a stripe."""
+
+    dataset: DatasetName
     row: int  # Top pixel of stripe
     beg: int  # First column with data
     end: int  # Last column with data
+
+
+def read_stripes(stripe_csv, dataset: DatasetName) -> list[Stripe]:
+    stripes = []
+    with open(stripe_csv) as f:
+        reader = csv.DictReader(f)
+        for row in [s for s in reader if s["dataset"] == dataset]:
+            stripe = Stripe(
+                dataset=row["dataset"],
+                row=int(row["row"]),
+                beg=int(row["beg"]),
+                end=int(row["end"]),
+            )
+            stripes.append(stripe)
+        return stripes

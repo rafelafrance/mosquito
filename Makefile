@@ -10,18 +10,16 @@ test:
 	$(PYTHON) -m unittest discover
 
 install: venv
-	source $(VENV)/bin/activate
-	$(PIP_INSTALL) -U pip setuptools wheel
 	$(PIP_INSTALL) .
 
 dev: venv
-	source $(VENV)/bin/activate
-	$(PIP_INSTALL) -U pip setuptools wheel
 	$(PIP_INSTALL) -e .[dev]
 	pre-commit install
 
 venv:
 	test -d $(VENV) || $(PY_VER) -m venv $(VENV)
+	source $(VENV)/bin/activate
+	$(PIP_INSTALL) -U pip setuptools wheel
 
 clean:
 	rm -r $(VENV)
