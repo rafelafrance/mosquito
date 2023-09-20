@@ -15,6 +15,7 @@ requires-python = ">=3.11"
 dependencies = [
     "Pillow",
     "git-lfs",
+    "imagecodecs",
     "jupyter",
     "jupyterlab",
     "matplotlib",

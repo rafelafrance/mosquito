@@ -32,15 +32,9 @@ def train(args):
     model = UNet()
     model.to(device)
 
-    if args.load_model:
-        load_model_state(model, args.load_model)
+    load_model_state(model, args.load_model)
 
-    logging.info("Reading image data data.")
-    target = args.target_file
-    layers = np.stack(
-        [io.imread(lay) for lay in args.layer_dir if lay != target], axis=2
-    )
-    target = io.imread(target) if target else None
+    layers, target = get_images(args)
 
     train_loader = get_train_loader(args, layers, target)
     val_loader = get_val_loader(args, layers, target)
@@ -52,14 +46,14 @@ def train(args):
 
 
 def all_epochs(args, model, device, train_loader, val_loader, loss_fn, optimizer):
-    logging.info("Training started.")
+    logging.info("Training started")
 
     stats = Stats(
         best_iou=model.state.get("iou", 0.0),
         best_loss=model.state.get("best_loss", float("Inf")),
     )
 
-    jaccard = BinaryJaccardIndex()
+    jaccard = BinaryJaccardIndex().to(device)
 
     end_epoch, start_epoch = get_epoch_range(args, model)
 
@@ -83,12 +77,6 @@ def all_epochs(args, model, device, train_loader, val_loader, loss_fn, optimizer
     return stats
 
 
-def get_epoch_range(args, model):
-    start_epoch = model.state.get("epoch", 0) + 1
-    end_epoch = start_epoch + args.epochs
-    return end_epoch, start_epoch
-
-
 def one_epoch(model, device, loader, loss_fn, jaccard, optimizer=None):
     """Train or validate an epoch."""
     running_loss = 0.0
@@ -96,7 +84,7 @@ def one_epoch(model, device, loader, loss_fn, jaccard, optimizer=None):
 
     for images, y_true in loader:
         images = images.to(device)
-        y_true = y_true.to(device)
+        y_true = torch.unsqueeze(y_true, 1).to(device)
 
         y_pred = model(images)
 
@@ -113,8 +101,28 @@ def one_epoch(model, device, loader, loss_fn, jaccard, optimizer=None):
     return running_iou / len(loader), running_loss / len(loader)
 
 
+def get_images(args):
+    logging.info("Reading image data")
+
+    layers = [io.imread(p) for p in args.layer_path]
+    layers = np.stack(layers, axis=0)
+
+    target = None
+    if args.target_file:
+        target = io.imread(args.target_file)
+        target = (target == 1.0).astype(float)
+
+    return layers, target
+
+
+def get_epoch_range(args, model):
+    start_epoch = model.state.get("epoch", 0) + 1
+    end_epoch = start_epoch + args.epochs
+    return end_epoch, start_epoch
+
+
 def get_train_loader(args, layers, target):
-    logging.info("Loading training data.")
+    logging.info("Loading training data")
     stripes = stripe.read_stripes(args.stripe_csv, "train")
     tiles = tile.get_tiles(stripes, stride=args.train_stride)
     dataset = TileDataset(tiles, layers, target, augment=True)
@@ -129,7 +137,7 @@ def get_train_loader(args, layers, target):
 
 
 def get_val_loader(args, layers, target):
-    logging.info("Loading validation data.")
+    logging.info("Loading validation data")
     stripes = stripe.read_stripes(args.stripe_csv, "val")
     tiles = tile.get_tiles(stripes, stride=args.val_stride)
     dataset = TileDataset(tiles, layers, target)
@@ -145,7 +153,7 @@ def load_model_state(model, load_model):
     """Load a previous model."""
     model.state = torch.load(load_model) if load_model else {}
     if model.state.get("model_state"):
-        logging.info("Loading a model.")
+        logging.info("Loading a model")
         model.load_state_dict(model.state["model_state"])
 
 

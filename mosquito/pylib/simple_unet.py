@@ -6,61 +6,67 @@ class UNet(nn.Module):
     def __init__(self, in_channels: int = 4, out_channels: int = 1, features: int = 64):
         super().__init__()
 
-        self.input = self.double_conv(in_channels, features)
-
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        self.encoder1 = self.block(features, features * 2)
-        self.encoder2 = self.block(features * 2, features * 4)
-        self.encoder3 = self.block(features * 4, features * 8)
-        self.encoder4 = self.block(features * 8, features * 16)
+        # self.input = self.block(in_channels, features)
 
-        self.bottleneck = nn.Conv2d(features * 16, features * 16, kernel_size=3)
+        self.encode1 = self.block(in_channels, features)
+        self.encode2 = self.block(features, features * 2)
+        self.encode3 = self.block(features * 2, features * 4)
+        self.encode4 = self.block(features * 4, features * 8)
+
+        # self.bottleneck = nn.Conv2d(
+        #     features * 16, features * 16, kernel_size=3, padding=1
+        # )
+        self.bottleneck = self.block(features * 8, features * 16)
 
         self.unpool4 = nn.ConvTranspose2d(
             features * 16, features * 8, kernel_size=2, stride=2
         )
-        self.decoder4 = self.block((features * 8) * 2, features * 8)
+        self.decode4 = self.block(features * 16, features * 8)
 
         self.unpool3 = nn.ConvTranspose2d(
             features * 8, features * 4, kernel_size=2, stride=2
         )
-        self.decoder3 = self.block((features * 4) * 2, features * 4)
+        self.decode3 = self.block(features * 8, features * 4)
 
         self.unpool2 = nn.ConvTranspose2d(
             features * 4, features * 2, kernel_size=2, stride=2
         )
-        self.decoder2 = self.block((features * 2) * 2, features * 2)
+        self.decode2 = self.block(features * 4, features * 2)
 
         self.unpool1 = nn.ConvTranspose2d(
             features * 2, features, kernel_size=2, stride=2
         )
-        self.decoder1 = self.block(features * 2, features)
+        self.decode1 = self.block(features * 2, features)
 
-        self.output = nn.Conv2d(features, out_channels, kernel_size=3)
+        # self.output = nn.Conv2d(features, out_channels, kernel_size=1)
+        self.output = nn.ConvTranspose2d(
+            features, out_channels, kernel_size=2, stride=2
+        )
 
     def forward(self, x):
-        x = self.input(x)
-        enc1 = self.pool(self.encoder1(x))
-        enc2 = self.pool(self.encoder2(enc1))
-        enc3 = self.pool(self.encoder3(enc2))
-        enc4 = self.pool(self.encoder4(enc3))
+        enc1 = self.pool(self.encode1(x))
+        enc2 = self.pool(self.encode2(enc1))
+        enc3 = self.pool(self.encode3(enc2))
+        enc4 = self.pool(self.encode4(enc3))
 
-        x = self.bottleneck(enc4)
+        bottleneck = self.bottleneck(self.pool(enc4))
 
-        x = self.unpool4(x)
-        x = self.decoder4(torch.cat([x, enc4], dim=1))
+        dec4 = self.unpool4(bottleneck)
+        dec4 = self.decode4(torch.cat((dec4, enc4), dim=1))
 
-        x = self.unpool3(x)
-        x = self.decoder3(torch.cat([x, enc3], dim=1))
+        dec3 = self.unpool3(dec4)
+        dec3 = self.decode3(torch.cat((dec3, enc3), dim=1))
 
-        x = self.unpool2(x)
-        x = self.decoder2(torch.cat([x, enc2], dim=1))
+        dec2 = self.unpool2(dec3)
+        dec2 = self.decode2(torch.cat((dec2, enc2), dim=1))
 
-        x = self.unpool1(x)
-        x = self.decoder1(torch.cat([x, enc1], dim=1))
+        dec1 = self.unpool1(dec2)
+        dec1 = self.decode1(torch.cat((dec1, enc1), dim=1))
 
-        x = self.output(x)
+        x = self.output(dec1)
+
         return x
 
     @staticmethod

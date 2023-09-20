@@ -1,8 +1,4 @@
-import numpy as np
-import torch
-from skimage import io
 from torch.utils.data import Dataset
-from torchvision import transforms
 
 from .tile import Tile
 
@@ -10,21 +6,26 @@ from .tile import Tile
 class TileDataset(Dataset):
     def __init__(self, tiles: list[Tile], layers, target=None, augment=False):
         self.tiles = tiles
-        self.layers = np.stack([io.imread(lay) for lay in layers], axis=2)
-        self.target = io.imread(target) if target else None
+        self.layers = layers
+        self.target = target
         self.augment = augment
 
     def __len__(self):
         return len(self.tiles)
 
     def __getitem__(self, idx):
-        ...
+        tile = self.tiles[idx]
 
-    def get_tile(self):
-        ...
+        image = self.layers[:, tile.top : tile.bottom, tile.left : tile.right]
 
-    def transform(self, tile):
-        """Perform the same transforms on the given images."""
+        target = None
+        if self.target is not None:
+            target = self.target[tile.top : tile.bottom, tile.left : tile.right]
+
+        return image, target
+
+    def transform(self, image, target):
+        """Perform the transforms on the given images."""
         # if augment:
         #     xform += [
         #         transforms.RandomHorizontalFlip(),

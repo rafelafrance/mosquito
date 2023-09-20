@@ -4,7 +4,6 @@ import textwrap
 from pathlib import Path
 
 from pylib import log
-from pylib import stripe
 from pylib import tile
 from pylib import trainer_engine
 
@@ -14,24 +13,6 @@ def main():
 
     args = parse_args()
     trainer_engine.train(args)
-
-    test_stripes = stripe.read_stripes(args.stripe_csv, "test")
-    test_tiles = tile.get_tiles(test_stripes)
-    print(len(test_stripes))
-    print(len(test_tiles))
-    print()
-
-    val_stripes = stripe.read_stripes(args.stripe_csv, "val")
-    val_tiles = tile.get_tiles(val_stripes)
-    print(len(val_stripes))
-    print(len(val_tiles))
-    print()
-
-    train_stripes = stripe.read_stripes(args.stripe_csv, "train")
-    train_tiles = tile.get_tiles(train_stripes, stride=192)
-    print(len(train_stripes))
-    print(len(train_tiles))
-    print()
 
     log.finished()
 
@@ -44,6 +25,7 @@ def parse_args():
 
     arg_parser.add_argument(
         "--stripe-csv",
+        "--stripes",
         type=Path,
         metavar="PATH",
         required=True,
@@ -51,15 +33,18 @@ def parse_args():
     )
 
     arg_parser.add_argument(
-        "--layer-dir",
+        "--layer-path",
+        "--lay",
         type=Path,
+        action="append",
         metavar="PATH",
         required=True,
-        help="""Infer larval hatching areas from these images.""",
+        help="""Input layer image.""",
     )
 
     arg_parser.add_argument(
         "--target-file",
+        "--target",
         type=Path,
         metavar="PATH",
         help="""The larval hatching area target results.""",
@@ -67,6 +52,7 @@ def parse_args():
 
     arg_parser.add_argument(
         "--save-model",
+        "--save",
         type=Path,
         metavar="PATH",
         required=True,
@@ -75,6 +61,7 @@ def parse_args():
 
     arg_parser.add_argument(
         "--load-model",
+        "--load",
         type=Path,
         metavar="PATH",
         help="""Continue training with weights from this model.""",
@@ -106,6 +93,7 @@ def parse_args():
 
     arg_parser.add_argument(
         "--tile-size",
+        "--size",
         type=int,
         metavar="INT",
         default=tile.TILE_SIZE,
@@ -114,6 +102,7 @@ def parse_args():
 
     arg_parser.add_argument(
         "--batch-size",
+        "--batch",
         type=int,
         metavar="INT",
         default=16,
@@ -134,6 +123,13 @@ def parse_args():
         metavar="INT",
         default=100,
         help="""How many epochs to train. (default: %(default)s)""",
+    )
+
+    arg_parser.add_argument(
+        "--log-dir",
+        type=Path,
+        metavar="DIR",
+        help="""Save tensorboard logs to this directory.""",
     )
 
     arg_parser.add_argument(

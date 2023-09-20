@@ -13,3 +13,6 @@ LAYERS = [
 TARGET = LAYER_DIR / "larv_spot_50m_correct.tif"
 
 STRIPE_CSV = DATA_DIR / "stripes.csv"
+
+NA_LO = -3.0e38
+NA_HI = 3.0e38
