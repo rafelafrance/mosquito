@@ -162,6 +162,7 @@ cython_debug/
 # data
 data/layers/
 data/old/
+data/models/
 docs/
 runs/
 *junk*

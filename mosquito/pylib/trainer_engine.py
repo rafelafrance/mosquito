@@ -3,33 +3,29 @@ from dataclasses import dataclass
 
 import numpy as np
 import torch
-from skimage import io
 from torch import nn
 from torch import optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from torchmetrics.classification import BinaryJaccardIndex
 
 from . import stripe
 from . import tile
-from .simple_unet import UNet
+from .simple_unet import SimpleUNet
+from .tile_dataset import prepare_image
 from .tile_dataset import TileDataset
 
 
 @dataclass
 class Stats:
     is_best: bool = False
-    best_iou: float = 0.0
     best_loss: float = float("Inf")
-    train_iou: float = 0.0
     train_loss: float = float("Inf")
-    val_iou: float = 0.0
     val_loss: float = float("Inf")
 
 
 def train(args):
     device = torch.device("cuda" if torch.has_cuda else "cpu")
-    model = UNet()
+    model = SimpleUNet()
     model.to(device)
 
     load_model_state(model, args.load_model)
@@ -48,12 +44,7 @@ def train(args):
 def all_epochs(args, model, device, train_loader, val_loader, loss_fn, optimizer):
     logging.info("Training started")
 
-    stats = Stats(
-        best_iou=model.state.get("iou", 0.0),
-        best_loss=model.state.get("best_loss", float("Inf")),
-    )
-
-    jaccard = BinaryJaccardIndex().to(device)
+    stats = Stats(best_loss=model.state.get("best_loss", float("Inf")))
 
     end_epoch, start_epoch = get_epoch_range(args, model)
 
@@ -61,14 +52,10 @@ def all_epochs(args, model, device, train_loader, val_loader, loss_fn, optimizer
 
     for epoch in range(start_epoch, end_epoch):
         model.train()
-        stats.train_iou, stats.train_loss = one_epoch(
-            model, device, train_loader, loss_fn, jaccard, optimizer
-        )
+        stats.train_loss = one_epoch(model, device, train_loader, loss_fn, optimizer)
 
         model.eval()
-        stats.val_iou, stats.val_loss = one_epoch(
-            model, device, val_loader, loss_fn, jaccard
-        )
+        stats.val_loss = one_epoch(model, device, val_loader, loss_fn)
 
         save_checkpoint(model, optimizer, args.save_model, stats, epoch)
         log_stats(writer, stats, epoch)
@@ -77,14 +64,12 @@ def all_epochs(args, model, device, train_loader, val_loader, loss_fn, optimizer
     return stats
 
 
-def one_epoch(model, device, loader, loss_fn, jaccard, optimizer=None):
-    """Train or validate an epoch."""
+def one_epoch(model, device, loader, loss_fn, optimizer=None):
     running_loss = 0.0
-    running_iou = 0.0
 
     for images, y_true in loader:
         images = images.to(device)
-        y_true = torch.unsqueeze(y_true, 1).to(device)
+        y_true = y_true.to(device)
 
         y_pred = model(images)
 
@@ -96,21 +81,17 @@ def one_epoch(model, device, loader, loss_fn, jaccard, optimizer=None):
             optimizer.step()
 
         running_loss += loss.item()
-        running_iou += jaccard(y_pred, y_true)
 
-    return running_iou / len(loader), running_loss / len(loader)
+    return running_loss / len(loader)
 
 
 def get_images(args):
     logging.info("Reading image data")
 
-    layers = [io.imread(p) for p in args.layer_path]
+    layers = [prepare_image(p) for p in args.layer_path]
     layers = np.stack(layers, axis=0)
 
-    target = None
-    if args.target_file:
-        target = io.imread(args.target_file)
-        target = (target == 1.0).astype(float)
+    target = prepare_image(args.target_file, target=True) if args.target_file else None
 
     return layers, target
 
@@ -124,7 +105,9 @@ def get_epoch_range(args, model):
 def get_train_loader(args, layers, target):
     logging.info("Loading training data")
     stripes = stripe.read_stripes(args.stripe_csv, "train")
-    tiles = tile.get_tiles(stripes, stride=args.train_stride)
+    tiles = tile.get_tiles(
+        stripes, stride=args.train_stride, limits=target.shape[1:], size=args.tile_size
+    )
     dataset = TileDataset(tiles, layers, target, augment=True)
     return DataLoader(
         dataset,
@@ -132,14 +115,15 @@ def get_train_loader(args, layers, target):
         num_workers=args.workers,
         shuffle=True,
         pin_memory=True,
-        drop_last=len(dataset) % args.batch_size == 1,
     )
 
 
 def get_val_loader(args, layers, target):
     logging.info("Loading validation data")
     stripes = stripe.read_stripes(args.stripe_csv, "val")
-    tiles = tile.get_tiles(stripes, stride=args.val_stride)
+    tiles = tile.get_tiles(
+        stripes, stride=args.val_stride, limits=target.shape[1:], size=args.tile_size
+    )
     dataset = TileDataset(tiles, layers, target)
     return DataLoader(
         dataset,
@@ -160,9 +144,8 @@ def load_model_state(model, load_model):
 def save_checkpoint(model, optimizer, save_model, stats, epoch):
     """Save the model if it meets criteria for being the current best model."""
     stats.is_best = False
-    if (stats.val_iou, -stats.val_loss) >= (stats.best_iou, -stats.best_loss):
+    if stats.val_loss <= stats.best_loss:
         stats.is_best = True
-        stats.best_iou = stats.val_iou
         stats.best_loss = stats.val_loss
         torch.save(
             {
@@ -170,7 +153,6 @@ def save_checkpoint(model, optimizer, save_model, stats, epoch):
                 "model_state": model.state_dict(),
                 "optimizer_state": optimizer.state_dict(),
                 "best_loss": stats.best_loss,
-                "iou": stats.best_iou,
             },
             save_model,
         )
@@ -180,17 +162,15 @@ def log_stats(writer, stats, epoch):
     """Log results of the epoch."""
     logging.info(
         f"{epoch:4}: "
-        f"Train: loss {stats.train_loss:0.6f} IoU {stats.train_iou:0.6f} "
-        f"Valid: loss {stats.val_loss:0.6f} IoU {stats.val_iou:0.6f}"
+        f"Train: loss {stats.train_loss:0.6f} "
+        f"Valid: loss {stats.val_loss:0.6f}"
         f"{' ++' if stats.is_best else ''}"
     )
     writer.add_scalars(
         "Training vs. Validation",
         {
             "Training loss": stats.train_loss,
-            "Training IoU": stats.train_iou,
             "Validation loss": stats.val_loss,
-            "Validation IoU": stats.val_iou,
         },
         epoch,
     )

@@ -71,7 +71,7 @@ def parse_args():
         "--lr",
         type=float,
         metavar="FLOAT",
-        default=0.001,
+        default=0.00001,
         help="""Initial learning rate. (default: %(default)s)""",
     )
 
@@ -105,7 +105,7 @@ def parse_args():
         "--batch",
         type=int,
         metavar="INT",
-        default=16,
+        default=8,
         help="""Input batch size. (default: %(default)s)""",
     )
 
