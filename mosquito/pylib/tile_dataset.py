@@ -41,10 +41,39 @@ class TileDataset(Dataset):
         if self.target is not None:
             target = self.target[:, tile.top : tile.bottom, tile.left : tile.right]
 
+        if self.augment:
+            image, target = self.transform(image, target)
+
         return image, target
 
-    def transform(self, image, target):
-        ...
+    @staticmethod
+    def transform(image, target):
+        change = False
+
+        if (k := np.random.randint(4)) > 0:
+            change = True
+            image = np.rot90(image, k=k, axes=(1, 2))
+            if target is not None:
+                target = np.rot90(target, k=k, axes=(1, 2))
+
+        if np.random.randint(2) > 0:
+            change = True
+            image = np.flip(image, axis=1)
+            if target is not None:
+                target = np.flip(target, axis=1)
+
+        if np.random.randint(2) > 0:
+            change = True
+            image = np.flip(image, axis=2)
+            if target is not None:
+                target = np.flip(target, axis=2)
+
+        if change:
+            image = image.copy()
+            if target is not None:
+                target = target.copy()
+
+        return image, target
 
 
 def prepare_image(path, target=False, threshold=10_000):
