@@ -47,7 +47,7 @@ def parse_args():
         "--target",
         type=Path,
         metavar="PATH",
-        help="""The larval hatching area target results.""",
+        help="""The larval hatching area target file.""",
     )
 
     arg_parser.add_argument(

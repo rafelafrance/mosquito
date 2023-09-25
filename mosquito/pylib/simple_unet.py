@@ -8,16 +8,11 @@ class SimpleUNet(nn.Module):
 
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        # self.input = self.block(in_channels, features)
-
         self.encode1 = self.block(in_channels, features)
         self.encode2 = self.block(features, features * 2)
         self.encode3 = self.block(features * 2, features * 4)
         self.encode4 = self.block(features * 4, features * 8)
 
-        # self.bottleneck = nn.Conv2d(
-        #     features * 16, features * 16, kernel_size=3, padding=1
-        # )
         self.bottleneck = self.block(features * 8, features * 16)
 
         self.unpool4 = nn.ConvTranspose2d(

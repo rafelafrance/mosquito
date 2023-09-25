@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-import numpy as np
-
 TILE_SIZE = 512
 
 
