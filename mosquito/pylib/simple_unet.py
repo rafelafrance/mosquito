@@ -3,8 +3,10 @@ import torch.nn as nn
 
 
 class SimpleUNet(nn.Module):
-    def __init__(self, in_channels: int = 4, out_channels: int = 1, features: int = 64):
+    def __init__(self, in_channels=4, out_channels=1, features=64, threshold=0.5):
         super().__init__()
+
+        self.threshold = threshold
 
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
 
@@ -39,6 +41,8 @@ class SimpleUNet(nn.Module):
             features, out_channels, kernel_size=2, stride=2
         )
 
+        self.sigmoid = nn.Sigmoid()
+
     def forward(self, x):
         enc1 = self.pool(self.encode1(x))
         enc2 = self.pool(self.encode2(enc1))
@@ -60,8 +64,12 @@ class SimpleUNet(nn.Module):
         x = self.decode1(torch.cat((x, enc1), dim=1))
 
         x = self.output(x)
+        x = self.sigmoid(x)
 
         return x
+
+    def zeros_and_ones(self, x):
+        return (x > self.threshold).float()
 
     @staticmethod
     def block(in_channels, out_channels):

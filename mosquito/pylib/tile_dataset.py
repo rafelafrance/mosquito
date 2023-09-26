@@ -44,7 +44,7 @@ class TileDataset(Dataset):
         if self.augment:
             image, target = self.transform(image, target)
 
-        return image, target
+        return image, target, idx
 
     @staticmethod
     def transform(image, target):

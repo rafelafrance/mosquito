@@ -163,6 +163,7 @@ cython_debug/
 data/layers/
 data/old/
 data/models/
+data/test/
 docs/
 runs/
 *junk*

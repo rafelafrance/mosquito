@@ -36,7 +36,7 @@ def train(args):
     val_loader = get_val_loader(args, layers, target)
 
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
-    loss_fn = nn.BCEWithLogitsLoss()
+    loss_fn = nn.BCELoss()
 
     all_epochs(args, model, device, train_loader, val_loader, loss_fn, optimizer)
 
@@ -67,7 +67,7 @@ def all_epochs(args, model, device, train_loader, val_loader, loss_fn, optimizer
 def one_epoch(model, device, loader, loss_fn, optimizer=None):
     running_loss = 0.0
 
-    for images, y_true in loader:
+    for images, y_true, _ in loader:
         images = images.to(device)
         y_true = y_true.to(device)
 

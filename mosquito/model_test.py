@@ -4,21 +4,23 @@ import textwrap
 from pathlib import Path
 
 from pylib import log
+from pylib import model_tester
 from pylib import tile
-from pylib import trainer_engine
 
 
 def main():
     log.started()
 
     args = parse_args()
-    trainer_engine.train(args)
+    model_tester.test(args)
 
     log.finished()
 
 
 def parse_args():
-    description = """Train a model to find where mosquito larvae are likely to hatch."""
+    description = """
+        Test a trained model for predicting where mosquito larvae are likely to hatch.
+        """
     arg_parser = argparse.ArgumentParser(
         description=textwrap.dedent(description), fromfile_prefix_chars="@"
     )
@@ -47,16 +49,8 @@ def parse_args():
         "--target",
         type=Path,
         metavar="PATH",
-        help="""The larval hatching area target file.""",
-    )
-
-    arg_parser.add_argument(
-        "--save-model",
-        "--save",
-        type=Path,
-        metavar="PATH",
         required=True,
-        help="""Save best models to this path.""",
+        help="""The larval hatching area target image.""",
     )
 
     arg_parser.add_argument(
@@ -64,31 +58,23 @@ def parse_args():
         "--load",
         type=Path,
         metavar="PATH",
-        help="""Continue training with weights from this model.""",
+        required=True,
+        help="""Test this model.""",
     )
 
     arg_parser.add_argument(
-        "--lr",
-        type=float,
-        metavar="FLOAT",
-        default=0.00001,
-        help="""Initial learning rate. (default: %(default)s)""",
+        "--image-dir",
+        type=Path,
+        metavar="PATH",
+        help="""Save the results to this image directory.""",
     )
 
     arg_parser.add_argument(
-        "--train-stride",
+        "--test-stride",
         type=int,
         metavar="INT",
-        default=192,
-        help="""Tile stride for training data. (default: %(default)s)""",
-    )
-
-    arg_parser.add_argument(
-        "--val-stride",
-        type=int,
-        metavar="INT",
-        default=256,
-        help="""Tile stride for validation data. (default: %(default)s)""",
+        default=tile.TILE_SIZE,
+        help="""Tile stride for testing data. (default: %(default)s)""",
     )
 
     arg_parser.add_argument(
@@ -117,30 +103,7 @@ def parse_args():
         help="""Number of workers for loading data. (default: %(default)s)""",
     )
 
-    arg_parser.add_argument(
-        "--epochs",
-        type=int,
-        metavar="INT",
-        default=100,
-        help="""How many epochs to train. (default: %(default)s)""",
-    )
-
-    arg_parser.add_argument(
-        "--log-dir",
-        type=Path,
-        metavar="DIR",
-        help="""Save tensorboard logs to this directory.""",
-    )
-
-    arg_parser.add_argument(
-        "--limit",
-        type=int,
-        metavar="INT",
-        help="""Limit the input to this many records.""",
-    )
-
     args = arg_parser.parse_args()
-
     return args
 
 
