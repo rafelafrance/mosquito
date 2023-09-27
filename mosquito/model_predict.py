@@ -4,7 +4,7 @@ import textwrap
 from pathlib import Path
 
 from pylib import log
-from pylib import model_tester
+from pylib import model_predictor
 from pylib import tile
 
 
@@ -12,26 +12,17 @@ def main():
     log.started()
 
     args = parse_args()
-    model_tester.test(args)
+    model_predictor.predict(args)
 
     log.finished()
 
 
 def parse_args():
     description = """
-        Test a trained model for predicting where mosquito larvae are likely to hatch.
+        Use a trained model to predicting where mosquito larvae are likely to hatch.
         """
     arg_parser = argparse.ArgumentParser(
         description=textwrap.dedent(description), fromfile_prefix_chars="@"
-    )
-
-    arg_parser.add_argument(
-        "--stripe-csv",
-        "--stripes",
-        type=Path,
-        metavar="PATH",
-        required=True,
-        help="""Get image stripe data.""",
     )
 
     arg_parser.add_argument(
@@ -42,15 +33,6 @@ def parse_args():
         metavar="PATH",
         required=True,
         help="""Input layer image.""",
-    )
-
-    arg_parser.add_argument(
-        "--target-file",
-        "--target",
-        type=Path,
-        metavar="PATH",
-        required=True,
-        help="""The larval hatching area target image.""",
     )
 
     arg_parser.add_argument(
@@ -70,12 +52,12 @@ def parse_args():
     )
 
     arg_parser.add_argument(
-        "--test-stride",
+        "--predict-stride",
         "--stride",
         type=int,
         metavar="INT",
         default=tile.TILE_SIZE,
-        help="""Tile stride for testing data. (default: %(default)s)""",
+        help="""Tile stride for predicting results. (default: %(default)s)""",
     )
 
     arg_parser.add_argument(

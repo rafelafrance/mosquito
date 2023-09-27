@@ -10,7 +10,7 @@ NA_HI = 3.0e38
 
 
 class TileDataset(Dataset):
-    def __init__(self, tiles: list[Tile], layers, target=None, augment=False):
+    def __init__(self, tiles: list[Tile], layers, target, augment=False):
         self.layers = layers
         self.target = target
         self.augment = augment
@@ -36,15 +36,20 @@ class TileDataset(Dataset):
         tile = self.tiles[idx]
 
         image = self.layers[:, tile.top : tile.bottom, tile.left : tile.right]
-
-        target = None
-        if self.target is not None:
-            target = self.target[:, tile.top : tile.bottom, tile.left : tile.right]
+        target = self.target[:, tile.top : tile.bottom, tile.left : tile.right]
 
         if self.augment:
             image, target = self.transform(image, target)
 
         return image, target, idx
+
+    def pos_weight(self):
+        pos, count = 0.0, 0.0
+        for tile in self.tiles:
+            count += (tile.bottom - tile.top) * (tile.right - tile.left)
+            pos += self.target[:, tile.top : tile.bottom, tile.left : tile.right].sum()
+        pos_wt = (count - pos) / pos if pos > 0.0 else 1.0
+        return [pos_wt]
 
     @staticmethod
     def transform(image, target):
