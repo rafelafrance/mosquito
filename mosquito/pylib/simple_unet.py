@@ -64,18 +64,9 @@ class SimpleUNet(nn.Module):
         x = self.decode1(torch.cat((x, enc1), dim=1))
 
         x = self.output(x)
-
-        return x
-
-    def squash(self, x):
-        """Squash the results using a softmax or sigmoid."""
         x = self.squash_layer(x)
-        return x
 
-    def zeros_and_ones(self, x, threshold=0.5):
-        """Convert results to a hard 0 or 1."""
-        x = self.squash(x)
-        return (x > threshold).float()
+        return x
 
     @staticmethod
     def block(in_channels, out_channels):

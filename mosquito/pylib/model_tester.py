@@ -3,11 +3,11 @@ import logging
 import numpy as np
 import torch
 import torchvision.transforms as xform
-from torch import nn
 from torch.utils.data import DataLoader
 
 from . import stripe
 from . import tile
+from .binary_jaccard_loss import BinaryJaccardLoss
 from .simple_unet import SimpleUNet
 from .tile_dataset import prepare_image
 from .tile_dataset import TileDataset
@@ -24,18 +24,19 @@ def test(args):
 
     test_loader = get_test_loader(args, layers, target)
 
-    loss_fn = nn.BCELoss()
+    loss_fn = BinaryJaccardLoss()
 
     logging.info("Testing started")
 
     model.eval()
-    test_loss = one_epoch(model, device, test_loader, loss_fn, args.image_dir)
+    test_iou = one_epoch(model, device, test_loader, loss_fn, args.image_dir)
 
-    logging.info(f"Test: loss {test_loss:0.6f}")
+    best_iou = model.state.get("best_iou")
+    logging.info(f"Test: IoU {test_iou:0.6f} Best: IoU {best_iou:0.6f}")
 
 
 def one_epoch(model, device, loader, loss_fn, image_dir):
-    running_loss = 0.0
+    running_iou = 0.0
 
     for images, y_true, indexes in loader:
         images = images.to(device)
@@ -45,7 +46,7 @@ def one_epoch(model, device, loader, loss_fn, image_dir):
 
         loss = loss_fn(y_pred, y_true)
 
-        running_loss += loss.item()
+        running_iou += 1.0 - loss.item()
 
         if image_dir:
             y_pred = model.zeros_and_ones(y_pred)
@@ -60,7 +61,7 @@ def one_epoch(model, device, loader, loss_fn, image_dir):
                 path = image_dir / f"test_pred_{idx:04d}.jpg"
                 to_image(path, pred)
 
-    return running_loss / len(loader)
+    return running_iou / len(loader)
 
 
 def to_image(path, data):

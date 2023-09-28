@@ -126,13 +126,6 @@ def parse_args():
         help="""How many epochs to train. (default: %(default)s)""",
     )
 
-    arg_parser.add_argument(
-        "--log-dir",
-        type=Path,
-        metavar="DIR",
-        help="""Save tensorboard logs to this directory.""",
-    )
-
     args = arg_parser.parse_args()
 
     return args
