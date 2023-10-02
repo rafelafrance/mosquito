@@ -4,23 +4,21 @@ import textwrap
 from pathlib import Path
 
 from pylib import log
-from pylib import model_tester
 from pylib import tile
+from pylib import trainer
 
 
 def main():
     log.started()
 
     args = parse_args()
-    model_tester.test(args)
+    trainer.train(args)
 
     log.finished()
 
 
 def parse_args():
-    description = """
-        Test a trained model for predicting where mosquito larvae are likely to hatch.
-        """
+    description = """Train a model to find where mosquito larvae are likely to hatch."""
     arg_parser = argparse.ArgumentParser(
         description=textwrap.dedent(description), fromfile_prefix_chars="@"
     )
@@ -54,28 +52,44 @@ def parse_args():
     )
 
     arg_parser.add_argument(
+        "--save-model",
+        "--save",
+        type=Path,
+        metavar="PATH",
+        required=True,
+        help="""Save best models to this path.""",
+    )
+
+    arg_parser.add_argument(
         "--load-model",
         "--load",
         type=Path,
         metavar="PATH",
-        required=True,
-        help="""Test this model.""",
+        help="""Continue training with weights from this model.""",
     )
 
     arg_parser.add_argument(
-        "--image-dir",
-        type=Path,
-        metavar="PATH",
-        help="""Save image results to this directory.""",
+        "--lr",
+        type=float,
+        metavar="FLOAT",
+        default=0.00001,
+        help="""Initial learning rate. (default: %(default)s)""",
     )
 
     arg_parser.add_argument(
-        "--test-stride",
-        "--stride",
+        "--train-stride",
         type=int,
         metavar="INT",
-        default=tile.TILE_SIZE,
-        help="""Tile stride for testing data. (default: %(default)s)""",
+        default=192,
+        help="""Tile stride for training data. (default: %(default)s)""",
+    )
+
+    arg_parser.add_argument(
+        "--val-stride",
+        type=int,
+        metavar="INT",
+        default=256,
+        help="""Tile stride for validation data. (default: %(default)s)""",
     )
 
     arg_parser.add_argument(
@@ -104,7 +118,16 @@ def parse_args():
         help="""Number of workers for loading data. (default: %(default)s)""",
     )
 
+    arg_parser.add_argument(
+        "--epochs",
+        type=int,
+        metavar="INT",
+        default=100,
+        help="""How many epochs to train. (default: %(default)s)""",
+    )
+
     args = arg_parser.parse_args()
+
     return args
 
 

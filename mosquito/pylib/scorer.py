@@ -13,7 +13,7 @@ from .tile_dataset import prepare_image
 from .tile_dataset import TileDataset
 
 
-def test(args):
+def score(args):
     device = torch.device("cuda" if torch.has_cuda else "cpu")
     model = SimpleUNet()
     model.to(device)
@@ -22,17 +22,17 @@ def test(args):
 
     layers, target = get_images(args)
 
-    test_loader = get_test_loader(args, layers, target)
+    test_loader = get_score_loader(args, layers, target)
 
     loss_fn = BinaryJaccardLoss()
 
-    logging.info("Testing started")
+    logging.info("Scoring started")
 
     model.eval()
-    test_iou = one_epoch(model, device, test_loader, loss_fn, args.image_dir)
+    score_iou = one_epoch(model, device, test_loader, loss_fn, args.image_dir)
 
     best_iou = model.state.get("best_iou")
-    logging.info(f"Test: IoU {test_iou:0.6f} Best: IoU {best_iou:0.6f}")
+    logging.info(f"Score: IoU {score_iou:0.6f} Best: IoU {best_iou:0.6f}")
 
 
 def one_epoch(model, device, loader, loss_fn, image_dir):
@@ -55,10 +55,10 @@ def one_epoch(model, device, loader, loss_fn, image_dir):
             y_true = y_true.detach().cpu()
 
             for idx, true, pred in zip(indexes, y_true, y_pred):
-                path = image_dir / f"test_true_{idx:04d}.jpg"
+                path = image_dir / f"score_true_{idx:04d}.jpg"
                 to_image(path, true)
 
-                path = image_dir / f"test_pred_{idx:04d}.jpg"
+                path = image_dir / f"score_pred_{idx:04d}.jpg"
                 to_image(path, pred)
 
     return running_iou / len(loader)
@@ -83,11 +83,11 @@ def get_images(args):
     return layers, target
 
 
-def get_test_loader(args, layers, target):
-    logging.info("Loading test data")
+def get_score_loader(args, layers, target):
+    logging.info("Loading scoring data")
     stripes = stripe.read_stripes(args.stripe_csv, "test")
     tiles = tile.get_tiles(
-        stripes, stride=args.test_stride, limits=target.shape[1:], size=args.tile_size
+        stripes, stride=args.score_stride, limits=target.shape[1:], size=args.tile_size
     )
     dataset = TileDataset(tiles, layers, target)
     return DataLoader(

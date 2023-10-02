@@ -4,7 +4,7 @@ import textwrap
 from pathlib import Path
 
 from pylib import log
-from pylib import model_predictor
+from pylib import predictor
 from pylib import tile
 
 
