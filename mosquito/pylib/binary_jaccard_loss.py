@@ -15,7 +15,7 @@ class BinaryJaccardLoss(nn.Module):
         union = (y_pred + y_true).sum() - intersection
         iou = intersection / (union + self.eps)
 
-        return 1.0 - iou
+        return 1.0 - iou  # Reverse sense for back propagation
 
     def zeros_and_ones(self, x):
         """Convert results to a hard 0 or 1."""

@@ -29,13 +29,15 @@ def score(args):
     logging.info("Scoring started")
 
     model.eval()
-    score_iou = one_epoch(model, device, test_loader, loss_fn, args.image_dir)
+    score_iou = one_epoch(
+        model, device, test_loader, loss_fn, args.image_dir, args.stripe_set
+    )
 
     best_iou = model.state.get("best_iou")
     logging.info(f"Score: IoU {score_iou:0.6f} Best: IoU {best_iou:0.6f}")
 
 
-def one_epoch(model, device, loader, loss_fn, image_dir):
+def one_epoch(model, device, loader, loss_fn, image_dir, stripe_set):
     running_iou = 0.0
 
     for images, y_true, indexes in loader:
@@ -46,19 +48,22 @@ def one_epoch(model, device, loader, loss_fn, image_dir):
 
         loss = loss_fn(y_pred, y_true)
 
-        running_iou += 1.0 - loss.item()
+        running_iou += 1.0 - loss.item()  # Reverse to put into bigger is better mode
 
         if image_dir:
-            y_pred = model.zeros_and_ones(y_pred)
+            y_pred = loss_fn.zeros_and_ones(y_pred)
 
             y_pred = y_pred.detach().cpu()
             y_true = y_true.detach().cpu()
 
             for idx, true, pred in zip(indexes, y_true, y_pred):
-                path = image_dir / f"score_true_{idx:04d}.jpg"
+                left, top, right, bottom = loader.dataset.get_tile_coords(idx)
+                pos = f"{left}_{top}_{right}_{bottom}"
+
+                path = image_dir / f"score_{stripe_set}_true_{idx:04d}_{pos}.jpg"
                 to_image(path, true)
 
-                path = image_dir / f"score_pred_{idx:04d}.jpg"
+                path = image_dir / f"score_{stripe_set}_pred_{idx:04d}_{pos}.jpg"
                 to_image(path, pred)
 
     return running_iou / len(loader)
@@ -85,7 +90,7 @@ def get_images(args):
 
 def get_score_loader(args, layers, target):
     logging.info("Loading scoring data")
-    stripes = stripe.read_stripes(args.stripe_csv, "test")
+    stripes = stripe.read_stripes(args.stripe_csv, args.stripe_set)
     tiles = tile.get_tiles(
         stripes, stride=args.score_stride, limits=target.shape[1:], size=args.tile_size
     )

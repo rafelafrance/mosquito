@@ -78,7 +78,7 @@ def one_epoch(model, device, loader, loss_fn, optimizer=None):
             loss.backward()
             optimizer.step()
 
-        running_iou += 1.0 - loss.item()
+        running_iou += 1.0 - loss.item()  # Reverse to put into bigger is better mode
 
     return running_iou / len(loader)
 

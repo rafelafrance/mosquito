@@ -105,6 +105,13 @@ def parse_args():
         help="""Number of workers for loading data. (default: %(default)s)""",
     )
 
+    arg_parser.add_argument(
+        "--stripe-set",
+        metavar="SET",
+        default="test",
+        help="""Which set of stripes to process. (default: %(default)s)""",
+    )
+
     args = arg_parser.parse_args()
     return args
 

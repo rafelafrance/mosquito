@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from typing import Literal
 from typing import TypeAlias
 
+from .tile import TILE_SIZE
+
 DatasetName: TypeAlias = Literal["train", "val", "test"]
 
 
@@ -29,3 +31,14 @@ def read_stripes(stripe_csv, dataset: DatasetName) -> list[Stripe]:
             )
             stripes.append(stripe)
         return stripes
+
+
+def filter_stripes(stripes, stride=TILE_SIZE):
+    new = []
+    prev = -999_999
+    for s in stripes:
+        if s.row < prev + stride:
+            continue
+        new.append(s)
+        prev = s.row
+    return new

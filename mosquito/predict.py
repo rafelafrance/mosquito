@@ -12,7 +12,7 @@ def main():
     log.started()
 
     args = parse_args()
-    model_predictor.predict(args)
+    predictor.predict(args)
 
     log.finished()
 

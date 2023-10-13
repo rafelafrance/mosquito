@@ -33,15 +33,19 @@ class TileDataset(Dataset):
         return len(self.tiles)
 
     def __getitem__(self, idx):
-        tile = self.tiles[idx]
+        left, top, right, bottom = self.get_tile_coords(idx)
 
-        image = self.layers[:, tile.top : tile.bottom, tile.left : tile.right]
-        target = self.target[:, tile.top : tile.bottom, tile.left : tile.right]
+        image = self.layers[:, top:bottom, left:right]
+        target = self.target[:, top:bottom, left:right]
 
         if self.augment:
             image, target = self.transform(image, target)
 
         return image, target, idx
+
+    def get_tile_coords(self, idx):
+        tile = self.tiles[idx]
+        return tile.left, tile.top, tile.right, tile.bottom
 
     def pos_weight(self):
         pos, count = 0.0, 0.0
@@ -81,7 +85,7 @@ class TileDataset(Dataset):
         return image, target
 
 
-def prepare_image(path, target=False, threshold=10_000):
+def prepare_image(path, target=False, threshold=10_000, zscore=True):
     """Prepare the image data by clipping flagged Inf values and doing a z-norm."""
     Image.MAX_IMAGE_PIXELS = None
     with Image.open(path) as img:
@@ -107,6 +111,7 @@ def prepare_image(path, target=False, threshold=10_000):
             hi = min(unique[-1], threshold)
             image = np.clip(image, lo, hi)
 
-        image = stats.zscore(image)
+        if zscore:
+            image = stats.zscore(image)
 
     return image
