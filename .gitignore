@@ -164,6 +164,7 @@ data/layers/
 data/old/
 data/models/
 data/test/
+notebooks/lidar/
 docs/
 runs/
 *junk*
